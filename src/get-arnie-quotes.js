@@ -69,11 +69,32 @@ const fetchQuoteForUrl = async (url) => {
 };
 
 /**
+ * @param {PromiseSettledResult<ArnieQuoteResult>} settled
+ * @returns {ArnieQuoteResult}
+ */
+const unwrapSettledResult = (settled) => {
+  if (settled.status === 'fulfilled') {
+    return settled.value;
+  }
+
+  return toFailureFromError(settled.reason);
+};
+
+/**
+ * @param {GetArnieQuotesInput} batch
+ * @returns {Promise<Array<ArnieQuoteResult>>}
+ */
+const runBatchGroup = async (batch) => {
+  const settled = await Promise.allSettled(batch.map(fetchQuoteForUrl));
+  return settled.map(unwrapSettledResult);
+};
+
+/**
  * @param {GetArnieQuotesInput} urls
  * @returns {ArnieQuoteResponse}
  */
 const getArnieQuotes = async (urls) => {
-  return Promise.all(urls.map(fetchQuoteForUrl));
+  return runBatchGroup(urls);
 };
 
 module.exports = {
