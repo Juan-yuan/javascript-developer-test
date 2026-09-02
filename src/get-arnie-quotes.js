@@ -1,5 +1,6 @@
 const { httpGet } = require('./mock-http-interface');
 
+const CONCURRENT_BATCH_SIZE = 50;
 const SUCCESS_KEY = 'Arnie Quote';
 const FAILURE_KEY = 'FAILURE';
 const HTTP_STATUS_OK = 200;
@@ -91,10 +92,27 @@ const runBatchGroup = async (batch) => {
 
 /**
  * @param {GetArnieQuotesInput} urls
+ * @returns {Promise<Array<ArnieQuoteResult>>}
+ */
+const processBatchGroups = async (urls) => {
+  /** @type {Array<ArnieQuoteResult>} */
+  const results = [];
+
+  for (let offset = 0; offset < urls.length; offset += CONCURRENT_BATCH_SIZE) {
+    const batch = urls.slice(offset, offset + CONCURRENT_BATCH_SIZE);
+    const batchResults = await runBatchGroup(batch);
+    results.push(...batchResults);
+  }
+
+  return results;
+};
+
+/**
+ * @param {GetArnieQuotesInput} urls
  * @returns {ArnieQuoteResponse}
  */
 const getArnieQuotes = async (urls) => {
-  return runBatchGroup(urls);
+  return processBatchGroups(urls);
 };
 
 module.exports = {
